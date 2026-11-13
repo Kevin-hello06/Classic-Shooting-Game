@@ -1,0 +1,10 @@
+# Godot
+.godot/
+/android/
+
+# Builds and signing keys
+build/
+*.apk
+*.aab
+*.keystore
+*.jks
