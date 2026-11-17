@@ -31,6 +31,18 @@ func _run() -> void:
 		var err := Level.validate(main.MAPS[i])
 		check(err == "", "map %d is valid %s" % [i + 1, err])
 
+	# --- music --------------------------------------------------------------
+	var waited := 0
+	while not Music.is_ready() and waited < 600:
+		await frames(1)
+		waited += 1
+	check(Music.is_ready(), "music rendered in background (%d frames)" % waited)
+	for i in Music.SONGS.size():
+		var wav: AudioStreamWAV = Music.track(i)
+		var secs := wav.data.size() / 2.0 / Music.RATE
+		check(wav.loop_mode == AudioStreamWAV.LOOP_FORWARD and secs > 10.0, "song %d loops (%.1f s)" % [i, secs])
+	check(Music.current_track() == 0, "level 1 plays song 1")
+
 	# --- level 1 loaded -----------------------------------------------------
 	var p: Player = main.player
 	check(is_instance_valid(p) and p.alive, "player spawned")
@@ -149,6 +161,26 @@ func _run() -> void:
 	check(ctl.fire_held, "fire button in bottom panel works")
 	ctl._release(1)
 	check(not ctl.fire_held and ctl.move_vec == Vector2.ZERO, "controls reset on release")
+	# Music and sound buttons in the corner of the game view.
+	var music_rect: Rect2 = ctl.buttons["music"]
+	var sound_rect: Rect2 = ctl.buttons["sound"]
+	var music_bus := AudioServer.get_bus_index("Music")
+	var sfx_bus := AudioServer.get_bus_index("SFX")
+	ctl._press(5, music_rect.get_center())
+	ctl._release(5)
+	check(not AudioSettings.music_on and AudioServer.is_bus_mute(music_bus), "music button turns music off")
+	check(not ctl.fire_held and ctl.move_vec == Vector2.ZERO, "button tap doesn't move or fire")
+	var cfg := ConfigFile.new()
+	cfg.load(AudioSettings.PATH)
+	check(cfg.get_value("audio", "music_on", true) == false, "music setting is saved")
+	ctl._press(5, music_rect.get_center())
+	ctl._release(5)
+	check(AudioSettings.music_on and not AudioServer.is_bus_mute(music_bus), "music button turns music back on")
+	ctl._press(6, sound_rect.get_center())
+	ctl._release(6)
+	check(not AudioSettings.sound_on and AudioServer.is_bus_mute(sfx_bus), "sound button turns effects off")
+	AudioSettings.set_sound(true)
+	check(not AudioServer.is_bus_mute(sfx_bus), "sound back on")
 	main.apply_layout(Vector2(792, 360))     # cover screen, landscape
 	check(not main.is_split, "wide screen uses overlay layout")
 	main.apply_layout(main.size)
@@ -160,6 +192,7 @@ func _run() -> void:
 	var carried := [p.health, p.ammo]
 	await frames(150)
 	check(main.level_index == 1 and main.state == "playing", "level 2 loads")
+	check(Music.current_track() == 1, "level 2 switches to song 2")
 	p = main.player
 	check([p.health, p.ammo] == carried, "health and ammo carry over %s -> %s" % [str(carried), str([p.health, p.ammo])])
 	await frames(240)

@@ -10,6 +10,7 @@ extends Control
 ##   the controls float over the game - left side moves, right side turns.
 
 signal tapped
+signal button_pressed(id: String)
 
 const DEADZONE := 0.12
 
@@ -20,6 +21,7 @@ var show_touch := false
 var level: Level
 var player: Player
 
+var buttons := {}               # id -> Rect2 in screen units (music/sound)
 var move_vec := Vector2.ZERO
 var fire_held := false
 var stick_radius := 50.0
@@ -80,6 +82,11 @@ func _input(event: InputEvent) -> void:
 
 
 func _press(index: int, pos: Vector2) -> void:
+	for id in buttons:
+		if (buttons[id] as Rect2).grow(8.0).has_point(pos):
+			_touches[index] = "button"
+			button_pressed.emit(id)
+			return
 	var role := "look"
 	if pos.distance_to(fire_center) <= fire_radius * 1.3:
 		role = "fire"

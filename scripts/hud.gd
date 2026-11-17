@@ -1,7 +1,9 @@
 class_name Hud
 extends Control
 ## Everything drawn over the game view: the weapon, muzzle flash, crosshair,
-## stats, messages and the red damage flash.
+## stats, messages, the red damage flash and the music/sound buttons.
+
+const BUTTON := 24.0
 
 var player: Player
 var total_enemies := 0
@@ -97,10 +99,44 @@ func _process(delta: float) -> void:
 	queue_redraw()
 
 
+## The music and sound on/off buttons, in this node's local coordinates.
+func button_rects() -> Dictionary:
+	var x2 := size.x - 8.0 - BUTTON
+	var x1 := x2 - 8.0 - BUTTON
+	return {"music": Rect2(x1, 6.0, BUTTON, BUTTON), "sound": Rect2(x2, 6.0, BUTTON, BUTTON)}
+
+
 func _draw() -> void:
+	var rects := button_rects()
+	_draw_button(rects["music"], "music", AudioSettings.music_on)
+	_draw_button(rects["sound"], "sound", AudioSettings.sound_on)
 	var c := size * 0.5
 	var col := Color(1, 1, 1, 0.7)
 	draw_line(c - Vector2(6, 0), c - Vector2(2, 0), col, 1.0)
 	draw_line(c + Vector2(2, 0), c + Vector2(6, 0), col, 1.0)
 	draw_line(c - Vector2(0, 6), c - Vector2(0, 2), col, 1.0)
 	draw_line(c + Vector2(0, 2), c + Vector2(0, 6), col, 1.0)
+
+
+func _draw_button(rect: Rect2, kind: String, on: bool) -> void:
+	draw_rect(rect, Color(0, 0, 0, 0.45))
+	draw_rect(rect, Color(1.0, 0.92, 0.75, 0.6), false, 1.0)
+	var col := Color(1.0, 0.92, 0.75) if on else Color(0.55, 0.55, 0.55)
+	var o := rect.position
+	var k := rect.size.x / 24.0
+	if kind == "music":
+		draw_circle(o + Vector2(9, 17) * k, 3.2 * k, col)
+		draw_circle(o + Vector2(17, 15) * k, 3.2 * k, col)
+		draw_line(o + Vector2(11.8, 17) * k, o + Vector2(11.8, 6) * k, col, 1.6 * k)
+		draw_line(o + Vector2(19.8, 15) * k, o + Vector2(19.8, 4) * k, col, 1.6 * k)
+		draw_line(o + Vector2(11.8, 6) * k, o + Vector2(19.8, 4) * k, col, 2.4 * k)
+	else:
+		draw_rect(Rect2(o + Vector2(4, 9) * k, Vector2(4, 6) * k), col)
+		draw_colored_polygon(PackedVector2Array([
+			o + Vector2(8, 9) * k, o + Vector2(13, 4) * k, o + Vector2(13, 20) * k, o + Vector2(8, 15) * k
+		]), col)
+		if on:
+			draw_arc(o + Vector2(13, 12) * k, 4.0 * k, -0.9, 0.9, 8, col, 1.4 * k)
+			draw_arc(o + Vector2(13, 12) * k, 7.5 * k, -0.9, 0.9, 10, col, 1.4 * k)
+	if not on:
+		draw_line(o + Vector2(4, 4) * k, o + Vector2(20, 20) * k, Color(1.0, 0.3, 0.25), 2.0 * k)

@@ -9,7 +9,7 @@ A light Doom-style shooter for the Galaxy Z Fold, made in Godot 4.5.
 
 The layout switches by itself when you fold or unfold the phone.
 
-All the art and sound is generated in code (`scripts/textures.gd`, `scripts/sfx.gd`), so the project has no asset files.
+All the art, sound effects and music are generated in code (`scripts/textures.gd`, `scripts/sfx.gd`, `scripts/music.gd`), so the project has no asset files.
 
 ## Controls
 
@@ -18,6 +18,8 @@ All the art and sound is generated in code (`scripts/textures.gd`, `scripts/sfx.
 | Move | Left stick (it appears where your thumb lands) | W A S D or arrow keys |
 | Turn | Drag anywhere else | Mouse (click to capture, Esc to release), Q / E, ← / → |
 | Fire | FIRE button (slide off it to turn while shooting) | Left click, Space or Ctrl |
+| Music on/off | ♪ button, top right | M |
+| Sound effects on/off | Speaker button, top right | N |
 
 Aim assist helps with thumb aiming. Shooting slightly to the side of an enemy still hits it.
 
@@ -37,6 +39,14 @@ You need the same setup as Fold Adventure: Godot export templates, JDK 17 and th
 The preset builds both **arm64-v8a** (the real Fold) and **x86_64** (the emulator). For the build you put on your phone, untick x86_64. That roughly halves the APK size.
 
 To install it from the laptop, run `adb install -r build/fold-blaster.apk`, or copy the file to the phone and open it.
+
+## Sound and music
+
+- **Sound effects** (`scripts/sfx.gd`): blaster, empty click, pickups, your hurt and death sounds, the exit, and enemy growls, pain, death and fireballs. Enemy sounds get quieter with distance, so you can hear one coming.
+- **Music** (`scripts/music.gd`): a looping chiptune-metal track for each level. Level 1 plays "Brick Halls" (E minor, 132 BPM) and level 2 plays "Steel Depths" (D Phrygian, 144 BPM). Extra levels cycle through the songs.
+- The songs are written as text, so you can compose your own. The comment at the top of `music.gd` explains the format. They're rendered on a background thread the first time the game runs, then cached. After editing a song, increase `CACHE_VERSION`.
+- The music and sound on/off choices are saved in `user://settings.cfg` and are remembered next time.
+- To use real recordings instead, put `.ogg` files in a `sounds/` folder and load them in place of the generated streams.
 
 ## Make your own levels
 
@@ -62,6 +72,8 @@ scripts/hud.gd             gun, muzzle flash, stats, messages
 scripts/fireball.gd, pickup.gd, exit_zone.gd
 scripts/textures.gd        procedural pixel art
 scripts/sfx.gd             procedural sound effects (autoload "Sfx")
+scripts/music.gd           music composer/synth and player (autoload "Music")
+scripts/audio_settings.gd  music/sound on-off, audio buses, saved settings
 tests/autotest.gd          automated play-through
 ```
 
@@ -71,7 +83,7 @@ tests/autotest.gd          automated play-through
 godot --headless --path . -- --autotest
 ```
 
-This runs a scripted play-through that covers movement, walls, shooting, aim assist, fireballs, pickups, enemy chasing, both Fold layouts, the touch controls, level change, death and restart, and winning. It prints PASS or FAIL for each check. The `tests/` folder is left out of the APK.
+This runs a scripted play-through that covers movement, walls, shooting, aim assist, fireballs, pickups, enemy chasing, both Fold layouts, the touch controls, the music and sound buttons, a song per level, level change, death and restart, and winning. It prints PASS or FAIL for each check. The `tests/` folder is left out of the APK.
 
 ## Ideas for next steps
 

@@ -65,8 +65,9 @@ func _physics_process(delta: float) -> void:
 	_attack_pose -= delta
 	_anim += delta
 	var sees := dist < SIGHT and _can_see_player()
-	if sees:
+	if sees and not _awake:
 		_awake = true
+		Sfx.play_from("alert", dist)
 	if not _awake or not player.alive:
 		_update_sprite(false)
 		return
@@ -123,7 +124,7 @@ func _shoot() -> void:
 	fb.direction = dir
 	fb.position = from + dir * 0.55
 	get_parent().add_child(fb)
-	Sfx.play("fireball")
+	Sfx.play_from("fireball", from.distance_to(target))
 
 
 func take_damage(amount: int) -> void:
@@ -139,11 +140,15 @@ func take_damage(amount: int) -> void:
 		velocity = Vector3.ZERO
 		sprite.texture = Tex.get_texture("enemy_dead")
 		remove_from_group("enemies")
-		Sfx.play("enemy_die")
+		Sfx.play_from("enemy_die", _distance_to_player())
 		killed.emit()
 	else:
-		Sfx.play("enemy_hurt")
+		Sfx.play_from("enemy_hurt", _distance_to_player())
 		_update_sprite(false)
+
+
+func _distance_to_player() -> float:
+	return global_position.distance_to(player.global_position) if is_instance_valid(player) else 0.0
 
 
 func _update_sprite(moving: bool) -> void:

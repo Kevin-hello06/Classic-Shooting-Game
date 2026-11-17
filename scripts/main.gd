@@ -74,6 +74,7 @@ func _ready() -> void:
 	controls = TouchControls.new()
 	add_child(controls)
 	controls.tapped.connect(_on_tap)
+	controls.button_pressed.connect(_on_button)
 	resized.connect(_layout)
 
 	load_level(0)
@@ -96,6 +97,8 @@ func _setup_input() -> void:
 	_bind("turn_left", [KEY_LEFT, KEY_Q])
 	_bind("turn_right", [KEY_RIGHT, KEY_E])
 	_bind("fire", [KEY_SPACE, KEY_CTRL])
+	_bind("toggle_music", [KEY_M])
+	_bind("toggle_sound", [KEY_N])
 	var click := InputEventMouseButton.new()
 	click.button_index = MOUSE_BUTTON_LEFT
 	InputMap.action_add_event("fire", click)
@@ -166,6 +169,7 @@ func load_level(index: int, carry_stats := false) -> void:
 	controls.player = player
 	state = "playing"
 	hud.show_message("LEVEL %d" % (index + 1), 1.5)
+	Music.play_for_level(index)
 
 
 func _spawn_pickup(kind: String, c: Vector2i) -> void:
@@ -191,6 +195,10 @@ func apply_layout(s: Vector2) -> void:
 	hud.position = game.position
 	hud.size = game.size
 	controls.set_layout(is_split, panel, game)
+	var rects := hud.button_rects()
+	for id in rects:
+		rects[id] = Rect2((rects[id] as Rect2).position + hud.position, (rects[id] as Rect2).size)
+	controls.buttons = rects
 
 
 func _process(delta: float) -> void:
@@ -213,6 +221,13 @@ func _restart() -> void:
 	load_level(0 if state == "won" else level_index)
 
 
+func _on_button(id: String) -> void:
+	if id == "music":
+		AudioSettings.toggle_music()
+	elif id == "sound":
+		AudioSettings.toggle_sound()
+
+
 func _on_enemy_killed() -> void:
 	player.kills += 1
 
@@ -227,6 +242,8 @@ func _on_exit_reached() -> void:
 	if state != "playing":
 		return
 	Sfx.play("exit")
+	# Freeze the level so nothing can hit you while the message is up.
+	world.process_mode = Node.PROCESS_MODE_DISABLED
 	var kills := "Kills %d/%d" % [player.kills, total_enemies]
 	if level_index + 1 < MAPS.size():
 		state = "level_done"
@@ -239,8 +256,20 @@ func _on_exit_reached() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("toggle_music"):
+		AudioSettings.toggle_music()
+		return
+	if event.is_action_pressed("toggle_sound"):
+		AudioSettings.toggle_sound()
+		return
 	# Laptop: click to capture the mouse and turn with it; Esc releases it.
 	if event is InputEventMouseButton and event.pressed and not DisplayServer.is_touchscreen_available():
+		if Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
+			var pos := (event as InputEventMouseButton).position
+			for id in controls.buttons:
+				if (controls.buttons[id] as Rect2).has_point(pos):
+					_on_button(id)
+					return
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	elif event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 		if is_instance_valid(player) and player.alive:
