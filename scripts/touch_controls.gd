@@ -184,7 +184,8 @@ func _draw_map(area: Rect2) -> void:
 				if edge:
 					draw_rect(Rect2(origin + Vector2(x, y) * cs, Vector2(cs, cs)), Color(0.25, 0.55, 0.3))
 	if level.exit_cell.x >= 0:
-		draw_rect(Rect2(origin + Vector2(level.exit_cell) * cs, Vector2(cs, cs)), Color(0.5, 1.0, 0.6))
+		var exit_col := Color(0.5, 1.0, 0.6) if level.exit_open else Color(1.0, 0.3, 0.25)
+		draw_rect(Rect2(origin + Vector2(level.exit_cell) * cs, Vector2(cs, cs)), exit_col)
 	var k := cs / Level.CELL
 	for e in get_tree().get_nodes_in_group("enemies"):
 		var ep := (e as Node3D).global_position

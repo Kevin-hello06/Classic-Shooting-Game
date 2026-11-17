@@ -44,6 +44,10 @@ const MAPS := [
 const SPLIT_RATIO := 0.8
 ## Render the 3D view at 1/N resolution for chunky retro pixels.
 const PIXEL_SCALE := 2
+## How a level ends:
+##   false - the exit is locked until every monster is gone, then you walk into it
+##   true  - the level ends by itself a moment after the last monster dies
+const AUTO_ADVANCE := false
 
 var level_index := 0
 var state := "playing"          # playing / dead / level_done / won
@@ -56,7 +60,9 @@ var player: Player
 var hud: Hud
 var controls: TouchControls
 var total_enemies := 0
+var exit_zone: ExitZone
 var _state_timer := 0.0
+var _blocked_msg_t := 0.0
 
 
 func _ready() -> void:
@@ -157,18 +163,20 @@ func load_level(index: int, carry_stats := false) -> void:
 		_spawn_pickup("health", c)
 	for c in level.ammo_cells:
 		_spawn_pickup("ammo", c)
-	var exit := ExitZone.new()
-	exit.position = level.cell_center(level.exit_cell)
-	exit.reached.connect(_on_exit_reached)
-	world.add_child(exit)
+	exit_zone = ExitZone.new()
+	exit_zone.position = level.cell_center(level.exit_cell)
+	exit_zone.reached.connect(_on_exit_reached)
+	exit_zone.blocked.connect(_on_exit_blocked)
+	world.add_child(exit_zone)
 
 	total_enemies = level.enemy_cells.size()
+	_set_exit_open(total_enemies == 0)
 	hud.player = player
 	hud.total_enemies = total_enemies
 	controls.level = level
 	controls.player = player
 	state = "playing"
-	hud.show_message("LEVEL %d" % (index + 1), 1.5)
+	hud.show_message("LEVEL %d\nClear out every monster" % (index + 1), 2.0)
 	Music.play_for_level(index)
 
 
@@ -203,6 +211,7 @@ func apply_layout(s: Vector2) -> void:
 
 func _process(delta: float) -> void:
 	_state_timer -= delta
+	_blocked_msg_t -= delta
 	match state:
 		"level_done":
 			if _state_timer <= 0.0:
@@ -230,6 +239,35 @@ func _on_button(id: String) -> void:
 
 func _on_enemy_killed() -> void:
 	player.kills += 1
+	if enemies_left() > 0 or state != "playing":
+		return
+	Sfx.play("unlock")
+	if AUTO_ADVANCE:
+		hud.show_message("ALL CLEAR", 1.5)
+		var this_level := level
+		get_tree().create_timer(1.5).timeout.connect(func():
+			if level == this_level:
+				_on_exit_reached())
+	else:
+		_set_exit_open(true)
+		hud.show_message("ALL CLEAR\nThe exit is open", 2.5)
+
+
+func enemies_left() -> int:
+	return total_enemies - player.kills
+
+
+func _set_exit_open(open: bool) -> void:
+	exit_zone.locked = not open
+	level.set_exit_open(open)
+
+
+func _on_exit_blocked() -> void:
+	if _blocked_msg_t > 0.0 or state != "playing":
+		return
+	_blocked_msg_t = 2.5
+	var n := enemies_left()
+	hud.show_message("EXIT LOCKED\n%d monster%s left" % [n, "" if n == 1 else "s"], 2.0)
 
 
 func _on_player_died() -> void:

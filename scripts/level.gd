@@ -20,12 +20,13 @@ render_mode unshaded, cull_disabled;
 
 uniform sampler2D tex : source_color, filter_nearest, repeat_enable;
 uniform float min_light = 0.18;
+uniform vec3 tint = vec3(1.0);
 
 void fragment() {
 	vec4 c = texture(tex, UV);
 	// Doom-style lighting: things get darker the further away they are.
 	float b = clamp(1.35 - length(VERTEX) / 16.0, min_light, 1.0);
-	ALBEDO = c.rgb * COLOR.rgb * b;
+	ALBEDO = c.rgb * COLOR.rgb * tint * b;
 }
 """
 
@@ -39,6 +40,8 @@ var exit_cell := Vector2i(-1, -1)
 var enemy_cells: Array[Vector2i] = []
 var health_cells: Array[Vector2i] = []
 var ammo_cells: Array[Vector2i] = []
+var exit_open := true
+var _exit_material: ShaderMaterial
 
 
 ## Same distance fade as the wall shader, for sprites.
@@ -202,7 +205,14 @@ func _build_geometry() -> void:
 	_add_flat(Rect2(Vector2.ZERO, size), WALL_H, Vector2(w, h), "ceiling", 0.18)
 	if exit_cell.x >= 0:
 		var r := Rect2(Vector2(exit_cell) * CELL, Vector2(CELL, CELL))
-		_add_flat(r, 0.01, Vector2.ONE, "exit_floor", 0.8)
+		_exit_material = _add_flat(r, 0.01, Vector2.ONE, "exit_floor", 0.8)
+
+
+## Locked exits glow red; open ones green.
+func set_exit_open(open: bool) -> void:
+	exit_open = open
+	if _exit_material:
+		_exit_material.set_shader_parameter("tint", Vector3.ONE if open else Vector3(3.0, 0.35, 0.3))
 
 
 func _add_wall_face(st: SurfaceTool, c: Vector2i, d: Vector2i) -> void:
@@ -231,7 +241,7 @@ func _add_wall_face(st: SurfaceTool, c: Vector2i, d: Vector2i) -> void:
 	_quad(st, [a, b, b + up, a + up], [Vector2(0, 1), Vector2(1, 1), Vector2(1, 0), Vector2(0, 0)], Color(shade, shade, shade))
 
 
-func _add_flat(r: Rect2, y: float, uv_size: Vector2, tex_id: String, min_light: float) -> void:
+func _add_flat(r: Rect2, y: float, uv_size: Vector2, tex_id: String, min_light: float) -> ShaderMaterial:
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 	var p0 := Vector3(r.position.x, y, r.position.y)
@@ -241,8 +251,10 @@ func _add_flat(r: Rect2, y: float, uv_size: Vector2, tex_id: String, min_light: 
 	_quad(st, [p0, p1, p2, p3], [Vector2.ZERO, Vector2(uv_size.x, 0), uv_size, Vector2(0, uv_size.y)], Color.WHITE)
 	var mi := MeshInstance3D.new()
 	mi.mesh = st.commit()
-	mi.material_override = make_material(tex_id, min_light)
+	var mat := make_material(tex_id, min_light)
+	mi.material_override = mat
 	add_child(mi)
+	return mat
 
 
 func _quad(st: SurfaceTool, v: Array, uv: Array, col: Color) -> void:

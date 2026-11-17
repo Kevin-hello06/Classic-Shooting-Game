@@ -186,9 +186,22 @@ func _run() -> void:
 	main.apply_layout(main.size)
 
 	# --- exit, next level, death, restart, win ------------------------------
-	p.global_position = main.level.cell_center(main.level.exit_cell)
-	await frames(5)
-	check(main.state == "level_done", "exit completes the level")
+	p.health = 100000
+	if main.AUTO_ADVANCE:
+		_kill_all()
+		await frames(100)
+		check(main.state == "level_done", "level ends by itself after the last monster")
+	else:
+		p.global_position = main.level.cell_center(main.level.exit_cell)
+		await frames(10)
+		check(main.state == "playing" and main.exit_zone.locked, "exit stays locked while monsters remain (%d left)" % main.enemies_left())
+		check(main.hud.message.text.begins_with("EXIT LOCKED"), "locked exit tells you how many are left")
+		check(not main.level.exit_open, "locked exit shows red on the map")
+		_kill_all()
+		await frames(5)
+		check(main.enemies_left() == 0 and main.level.exit_open, "killing every monster opens the exit")
+		check(main.state == "level_done", "open exit completes the level")
+	p.health = 80
 	var carried := [p.health, p.ammo]
 	await frames(150)
 	check(main.level_index == 1 and main.state == "playing", "level 2 loads")
@@ -204,12 +217,20 @@ func _run() -> void:
 	main.controls._release(0)
 	await frames(3)
 	check(main.state == "playing" and main.player.alive and main.level_index == 1, "tap restarts the level")
+	main.player.health = 100000
+	_kill_all()
+	await frames(3)
 	main.player.global_position = main.level.cell_center(main.level.exit_cell)
-	await frames(5)
+	await frames(100 if main.AUTO_ADVANCE else 5)
 	check(main.state == "won", "finishing the last level wins")
 
 	print("AUTOTEST %s (%d failures)" % ["PASSED" if failures == 0 else "FAILED", failures])
 	get_tree().quit(0 if failures == 0 else 1)
+
+
+func _kill_all() -> void:
+	for e in get_tree().get_nodes_in_group("enemies"):
+		(e as Enemy).take_damage(99)
 
 
 ## An open cell with two more open cells to its east.

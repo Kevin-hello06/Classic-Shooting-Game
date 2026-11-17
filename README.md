@@ -40,6 +40,12 @@ The preset builds both **arm64-v8a** (the real Fold) and **x86_64** (the emulato
 
 To install it from the laptop, run `adb install -r build/fold-blaster.apk`, or copy the file to the phone and open it.
 
+## Finishing a level
+
+The exit teleporter glows **red and stays locked** until every monster on the level is dead. Step on it early and it tells you how many are left. When the last one dies you hear a chime, the exit turns green (on the automap as well) and you can walk in.
+
+If you'd rather skip the exit, set `AUTO_ADVANCE := true` near the top of `scripts/main.gd`. The level then ends by itself 1.5 seconds after the last monster dies.
+
 ## Sound and music
 
 - **Sound effects** (`scripts/sfx.gd`): blaster, empty click, pickups, your hurt and death sounds, the exit, and enemy growls, pain, death and fireballs. Enemy sounds get quieter with distance, so you can hear one coming.

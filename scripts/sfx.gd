@@ -9,7 +9,7 @@ const RATE := 22050
 const SOUNDS := {
 	"shot": 0.18, "click": 0.05, "fireball": 0.3, "hurt": 0.22, "die": 0.7,
 	"enemy_hurt": 0.15, "enemy_die": 0.45, "pickup": 0.14, "exit": 0.6,
-	"alert": 0.45,
+	"alert": 0.45, "unlock": 0.5,
 }
 
 var _streams := {}
@@ -85,6 +85,10 @@ func _synth(id: String, dur: float) -> AudioStreamWAV:
 				phase += TAU * (95.0 - 40.0 * k + 12.0 * sin(TAU * 9.0 * t)) / RATE
 				lp += (rng.randf_range(-1.0, 1.0) - lp) * 0.3
 				s = ((fmod(phase / TAU, 1.0) * 2.0 - 1.0) * 0.45 + lp * 0.35) * sin(PI * k)
+			"unlock":
+				var note := 0 if k < 0.33 else (1 if k < 0.66 else 2)
+				phase += TAU * [440.0, 554.4, 659.3][note] / RATE
+				s = (1.0 if sin(phase) > 0.0 else -1.0) * 0.18 * (1.0 - fmod(k * 3.0, 1.0) * 0.6)
 			"exit":
 				phase += TAU * (300.0 + 700.0 * k) / RATE
 				s = sin(phase) * 0.4 * (1.0 - k) + sin(phase * 1.5) * 0.15 * (1.0 - k)

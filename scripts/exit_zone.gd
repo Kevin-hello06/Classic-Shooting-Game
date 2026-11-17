@@ -1,8 +1,15 @@
 class_name ExitZone
 extends Area3D
-## The glowing teleporter that ends the level.
+## The glowing teleporter that ends the level. While `locked` it glows red
+## and stepping on it only reports `blocked`.
 
 signal reached
+signal blocked
+
+const OPEN_COLOR := Color(1, 1, 1)
+const LOCKED_COLOR := Color(1.0, 0.25, 0.2)
+
+var locked := false
 
 var _sprite: Sprite3D
 var _t := 0.0
@@ -30,11 +37,15 @@ func _ready() -> void:
 
 func _physics_process(delta: float) -> void:
 	_t += delta
-	_sprite.modulate.a = 0.75 + sin(_t * 5.0) * 0.25
+	_sprite.modulate = LOCKED_COLOR if locked else OPEN_COLOR
+	_sprite.modulate.a = (0.5 if locked else 0.75) + sin(_t * 5.0) * 0.25
 	if _done:
 		return
 	for body in get_overlapping_bodies():
 		if body is Player and (body as Player).alive:
-			_done = true
-			reached.emit()
+			if locked:
+				blocked.emit()
+			else:
+				_done = true
+				reached.emit()
 			return
